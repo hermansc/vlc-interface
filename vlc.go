@@ -1,4 +1,4 @@
-package main
+package vlcinterface
 
 import (
   "fmt"
@@ -11,44 +11,35 @@ import (
 )
 
 type VLC struct {
-  Modules []Module
+  Modules map[string]Module
   Flags []string
 }
 
 type Module struct {
   name string
-  values map[string]string
+  properties map[string]string
 }
 
 func NewPlayer() *VLC {
-  return &VLC{}
+  return &VLC{ Modules: make(map[string]Module) }
 }
 
-func (player *VLC) AddModule(name string, values map[string]string) {
+func (player *VLC) AddModule(name string, properties map[string]string) {
   // The module object to insert.
   m := Module{
     name: name,
-    values: values,
+    properties: properties,
   }
 
-  // Check if module already exists
-  for i, modules := range player.Modules {
-    if name == modules.name {
-      // It exists, so we rewrite it.
-      player.Modules[i] = m
-      return
-    }
-  }
-
-  // Doesn't exist, so we append it.
-  player.Modules = append(player.Modules, m)
+  // Insert it / overwrite the existing one.
+  player.Modules[name] = m
 }
 
-func (player *VLC) SoutOpts() string {
+func (player *VLC) GetSoutOpts() string {
   var opts []string
   for _, module := range player.Modules {
     var mopts []string
-    for key, value := range module.values {
+    for key, value := range module.properties {
       mopts = append(mopts, fmt.Sprintf("%s=%s", key, value))
     }
     opts = append(opts,fmt.Sprintf("%s{%s}", module.name, strings.Join(mopts, ",")))
@@ -70,7 +61,7 @@ func (player *VLC) Command(input string) (*exec.Cmd, error) {
   }
 
   // Add the sout-modules flags.
-  opts_array= append(opts_array, fmt.Sprintf("--sout '%s'", player.SoutOpts()))
+  opts_array= append(opts_array, fmt.Sprintf("--sout '%s'", player.GetSoutOpts()))
 
   // Mangle together the command
   options := strings.Join(opts_array, " ")
@@ -123,49 +114,4 @@ func findVLCBinary() (string, error) {
     }
   }
   return "", errors.New("Could not find VLC binary")
-}
-
-func main(){
-  vlc := NewPlayer()
-
-  vlc.AddModule("transcode", map[string]string{
-    "vcodec": "mp4v",
-  })
-
-  vlc.AddModule("std", map[string]string{
-    "access": "http",
-    "mux": "ts",
-    "dst": ":8080",
-  })
-
-  //vlc.AddFlag("--verbose 2")
-
-  vlc.SetSoutOptions("#transcode{vcodec=h264}:std{access=http,mux=ts,dst=:8080}")
-
-  // Get our command to run, based on input file.
-  cmd, err := vlc.Command("http://nordond30a-f.akamaihd.net/i/wo/open/51/51f6610a9d94999eafb48058da88cc917ca24f22/44dafbc0-5ab2-4591-b47f-58d45015f3bf_,141,316,563,1266,2250,.mp4.csmil/index_3_av.m3u8?null=")
-
-  if err != nil {
-    fmt.Printf("Could not get command for VLC (%s). Aborting.\n", err.Error())
-    os.Exit(1)
-  }
-
-  // Get all stdout and sderr in our console.
-  cmd.Stdout = os.Stdout
-  cmd.Stderr = os.Stderr
-
-  // Run VLC, and wait for it to exit.
-  err = cmd.Run()
-
-  // Run forever.
-  for {
-    err = cmd.Run()
-    if err != nil {
-      fmt.Printf("An error occured: %s\n", err.Error())
-      os.Exit(1)
-    }
-  }
-
-  fmt.Println("VLC is done. Exiting.")
-
 }
