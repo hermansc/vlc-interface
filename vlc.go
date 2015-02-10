@@ -100,18 +100,18 @@ func (player *VLC) SetSoutOptions(opts string) {
 func findVLCBinary() (string, error) {
 	// See if we have either cvlc or vlc on PATH.
 	// Note that this will fail if a file named "vlc" or "cvlc" is in the exec directory.
-	if _, err := exec.LookPath("cvlc"); err == nil {
-		return "cvlc", nil
+	if path, err := exec.LookPath("cvlc"); err == nil {
+		return path, nil
 	}
-	if _, err := exec.LookPath("vlc"); err == nil {
-		return "vlc -I dummy", nil
+	if path, err := exec.LookPath("vlc"); err == nil {
+		return fmt.Sprintf("%s -I dummy", path), nil
 	}
 
 	// Alright, try some guesses based on OS.
 	if runtime.GOOS == "darwin" {
 		osx_default_path := "/Applications/VLC.app/Contents/MacOS/VLC"
-		if _, err := exec.LookPath(osx_default_path); err == nil {
-			return fmt.Sprintf("%s -I dummy", osx_default_path), nil
+		if path, err := exec.LookPath(osx_default_path); err == nil {
+			return fmt.Sprintf("%s -I dummy", path), nil
 		}
 	}
 	return "", errors.New("Could not find VLC binary")
