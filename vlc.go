@@ -3,7 +3,6 @@ package vlcinterface
 import (
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
 	"regexp"
 	"runtime"
@@ -101,17 +100,17 @@ func (player *VLC) SetSoutOptions(opts string) {
 func findVLCBinary() (string, error) {
 	// See if we have either cvlc or vlc on PATH.
 	// Note that this will fail if a file named "vlc" or "cvlc" is in the exec directory.
-	if _, err := os.Stat("vlc"); err == nil {
-		return "vlc -I dummy", nil
-	}
-	if _, err := os.Stat("cvlc"); err == nil {
+	if _, err := exec.LookPath("cvlc"); err == nil {
 		return "cvlc", nil
+	}
+	if _, err := exec.LookPath("vlc"); err == nil {
+		return "vlc -I dummy", nil
 	}
 
 	// Alright, try some guesses based on OS.
 	if runtime.GOOS == "darwin" {
 		osx_default_path := "/Applications/VLC.app/Contents/MacOS/VLC"
-		if _, err := os.Stat(osx_default_path); err == nil {
+		if _, err := exec.LookPath(osx_default_path); err == nil {
 			return fmt.Sprintf("%s -I dummy", osx_default_path), nil
 		}
 	}
